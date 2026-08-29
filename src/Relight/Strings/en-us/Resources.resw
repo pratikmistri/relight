@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="ViewModeBox.Header" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="PresetBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Lighting preset</value>
+  </data>
+  <data name="PreviousPresetButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Previous lighting preset</value>
+  </data>
+  <data name="PreviousPresetButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Previous preset (Left arrow)</value>
+  </data>
+  <data name="NextPresetButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Next lighting preset</value>
+  </data>
+  <data name="NextPresetButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Next preset (Right arrow or Space)</value>
+  </data>
+  <data name="ViewModeBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>View mode</value>
+  </data>
+  <data name="ViewModeRelit.Content" xml:space="preserve">
+    <value>Relit</value>
+  </data>
+  <data name="ViewModeCamera.Content" xml:space="preserve">
+    <value>Camera</value>
+  </data>
+  <data name="ViewModeDepth.Content" xml:space="preserve">
+    <value>Depth</value>
+  </data>
+  <data name="ViewModeNormals.Content" xml:space="preserve">
+    <value>Normals</value>
+  </data>
+
+  <data name="DepthResolutionBox.Header" xml:space="preserve">
+    <value>Depth quality</value>
+  </data>
+  <data name="DepthResolutionBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Depth model resolution</value>
+  </data>
+  <data name="DepthResolutionFastest.Content" xml:space="preserve">
+    <value>Fastest (168 px)</value>
+  </data>
+  <data name="DepthResolutionFast.Content" xml:space="preserve">
+    <value>Fast (224 px)</value>
+  </data>
+  <data name="DepthResolutionBalanced.Content" xml:space="preserve">
+    <value>Balanced (308 px)</value>
+  </data>
+  <data name="DepthResolutionDetailed.Content" xml:space="preserve">
+    <value>Detailed (448 px)</value>
+  </data>
+
+  <data name="SyncFramesToggle.Header" xml:space="preserve">
+    <value>Sync image to depth</value>
+  </data>
+  <data name="SyncFramesToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Synchronise the camera image with the depth field</value>
+  </data>
+  <data name="MirrorToggle.Header" xml:space="preserve">
+    <value>Mirror camera</value>
+  </data>
+  <data name="MirrorToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Mirror camera</value>
+  </data>
+
+  <data name="IntensitySlider.Header" xml:space="preserve">
+    <value>Intensity</value>
+  </data>
+  <data name="IntensitySlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Light intensity</value>
+  </data>
+  <data name="AmbientSlider.Header" xml:space="preserve">
+    <value>Ambient</value>
+  </data>
+  <data name="AmbientSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Ambient fill</value>
+  </data>
+  <data name="ReliefSlider.Header" xml:space="preserve">
+    <value>Relief</value>
+  </data>
+  <data name="ReliefSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Surface relief</value>
+  </data>
+  <data name="SpecularSlider.Header" xml:space="preserve">
+    <value>Specular</value>
+  </data>
+  <data name="SpecularSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Specular highlight</value>
+  </data>
+  <data name="ShadowSlider.Header" xml:space="preserve">
+    <value>Shadow</value>
+  </data>
+  <data name="ShadowSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Cast shadow strength</value>
+  </data>
+  <data name="OcclusionSlider.Header" xml:space="preserve">
+    <value>Occlusion</value>
+  </data>
+  <data name="OcclusionSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Ambient occlusion</value>
+  </data>
+  <data name="LightDepthSlider.Header" xml:space="preserve">
+    <value>Light depth</value>
+  </data>
+  <data name="LightDepthSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Light depth</value>
+  </data>
+  <data name="LightColorLabel.Text" xml:space="preserve">
+    <value>Light colour</value>
+  </data>
+</root>

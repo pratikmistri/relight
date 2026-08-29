@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="Relight.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:Relight"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Relight.Models"
+    Title="Relight"
+    mc:Ignorable="d">
+
+    <Grid Background="Black">
+        <SwapChainPanel
+            x:Name="RenderPanel"
+            AutomationProperties.AutomationId="RenderPanel"
+            AutomationProperties.Name="Relit camera view" />
+
+        <!--  Status while starting up or on failure.  -->
+        <Border
+            x:Name="StatusBanner"
+            Padding="18,12"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="{ThemeResource LayerFillColorDefaultBrush}"
+            CornerRadius="8">
+            <TextBlock
+                AutomationProperties.LiveSetting="Polite"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                Text="{x:Bind ViewModel.Status, Mode=OneWay}"
+                TextWrapping="Wrap" />
+        </Border>
+
+        <!--  Current mood, shown briefly whenever the preset changes.  -->
+        <Border
+            x:Name="PresetToast"
+            Margin="0,32,0,0"
+            Padding="18,10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Background="#B0000000"
+            CornerRadius="20"
+            Opacity="0">
+            <StackPanel>
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Foreground="White"
+                    Style="{ThemeResource BodyStrongTextBlockStyle}"
+                    Text="{x:Bind ViewModel.PresetName, Mode=OneWay}" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Foreground="#C0FFFFFF"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.PresetDescription, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <!--  Transport overlay: appears near the bottom edge, hides otherwise.  -->
+        <Border
+            x:Name="Overlay"
+            Margin="24"
+            Padding="14,10"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            Background="#C0000000"
+            CornerRadius="14">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button
+                    x:Uid="PreviousPresetButton"
+                    AutomationProperties.AutomationId="PreviousPresetButton"
+                    Click="OnPreviousPreset"
+                    Content="&#xE76B;"
+                    FontFamily="Segoe MDL2 Assets" />
+
+                <ComboBox
+                    x:Name="PresetBox"
+                    x:Uid="PresetBox"
+                    Width="190"
+                    AutomationProperties.AutomationId="PresetBox"
+                    ItemsSource="{x:Bind ViewModel.Presets}"
+                    SelectedIndex="0"
+                    SelectionChanged="OnPresetSelectionChanged">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:LightingPreset">
+                            <TextBlock Text="{x:Bind Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button
+                    x:Uid="NextPresetButton"
+                    AutomationProperties.AutomationId="NextPresetButton"
+                    Click="OnNextPreset"
+                    Content="&#xE76C;"
+                    FontFamily="Segoe MDL2 Assets" />
+
+                <AppBarSeparator />
+
+                <ComboBox
+                    x:Name="ViewModeBox"
+                    x:Uid="ViewModeBox"
+                    Width="130"
+                    AutomationProperties.AutomationId="ViewModeBox"
+                    SelectedIndex="0"
+                    SelectionChanged="OnViewModeSelectionChanged">
+                    <ComboBoxItem x:Uid="ViewModeRelit" />
+                    <ComboBoxItem x:Uid="ViewModeCamera" />
+                    <ComboBoxItem x:Uid="ViewModeDepth" />
+                    <ComboBoxItem x:Uid="ViewModeNormals" />
+                </ComboBox>
+
+                <ComboBox
+                    x:Name="DepthResolutionBox"
+                    x:Uid="DepthResolutionBox"
+                    Width="150"
+                    AutomationProperties.AutomationId="DepthResolutionBox"
+                    SelectedIndex="1"
+                    SelectionChanged="OnDepthResolutionSelectionChanged">
+                    <ComboBoxItem x:Uid="DepthResolutionFastest" />
+                    <ComboBoxItem x:Uid="DepthResolutionFast" />
+                    <ComboBoxItem x:Uid="DepthResolutionBalanced" />
+                    <ComboBoxItem x:Uid="DepthResolutionDetailed" />
+                </ComboBox>
+
+                <AppBarSeparator />
+
+                <TextBlock
+                    x:Name="DiagnosticsText"
+                    VerticalAlignment="Center"
+                    Foreground="#A0FFFFFF"
+                    Style="{ThemeResource CaptionTextBlockStyle}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

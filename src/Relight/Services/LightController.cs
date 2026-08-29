@@ -1,0 +1,102 @@
+using System;
+using Relight.Models;
+
+namespace Relight.Services;
+
+/// <summary>
+/// Steers the light from pointer input, falling back to a slow idle orbit when the
+/// pointer leaves. Mirrors the interaction model of the TypeGPU reference example.
+/// </summary>
+public sealed class LightController
+{
+    private const double OrbitSpeed = 0.00024;
+    private const double OrbitRadius = 0.26;
+    private const float WheelSensitivity = 0.0015f;
+    private const float WheelStepLimit = 60f;
+    private const float GrabRadius = 0.08f;
+
+    private enum ControlMode
+    {
+        Orbit,
+        Cursor,
+        Pinned,
+    }
+
+    private readonly RelightSettings _settings;
+    private ControlMode _mode = ControlMode.Orbit;
+
+    public LightController(RelightSettings settings)
+    {
+        _settings = settings;
+    }
+
+    /// <summary>Advances the idle orbit; call once per rendered frame.</summary>
+    public void Tick(double elapsedMilliseconds)
+    {
+        if (_mode != ControlMode.Orbit)
+        {
+            return;
+        }
+
+        double phase = elapsedMilliseconds * OrbitSpeed;
+        Place(
+            (float)(0.5 + (Math.Cos(phase) * OrbitRadius)),
+            (float)(0.44 + (Math.Sin(phase * 1.37) * OrbitRadius * 0.8)));
+    }
+
+    public void PointerEntered()
+    {
+        if (_mode != ControlMode.Pinned)
+        {
+            _mode = ControlMode.Cursor;
+        }
+    }
+
+    public void PointerExited()
+    {
+        if (_mode != ControlMode.Pinned)
+        {
+            _mode = ControlMode.Orbit;
+        }
+    }
+
+    public void PointerMoved(float x, float y)
+    {
+        if (_mode == ControlMode.Cursor)
+        {
+            Place(x, y);
+        }
+    }
+
+    /// <summary>Clicking the light toggles the pin; clicking elsewhere pins it there.</summary>
+    public void PointerPressed(float x, float y)
+    {
+        bool grabbed = MathF.Sqrt(
+            ((x - _settings.KeyLight.X) * (x - _settings.KeyLight.X)) +
+            ((y - _settings.KeyLight.Y) * (y - _settings.KeyLight.Y))) <= GrabRadius;
+
+        if (grabbed)
+        {
+            _mode = _mode == ControlMode.Pinned ? ControlMode.Cursor : ControlMode.Pinned;
+            return;
+        }
+
+        Place(x, y);
+        _mode = ControlMode.Pinned;
+    }
+
+    public void WheelChanged(int delta)
+    {
+        float clamped = Math.Sign(delta) * MathF.Min(MathF.Abs(delta), WheelStepLimit);
+        _settings.KeyLight.Z = Math.Clamp(
+            _settings.KeyLight.Z + (clamped * WheelSensitivity),
+            RelightSettings.LightZMin,
+            RelightSettings.LightZMax);
+    }
+
+    private void Place(float x, float y)
+    {
+        _settings.KeyLight.X = Math.Clamp(x, 0f, 1f);
+        _settings.KeyLight.Y = Math.Clamp(y, 0f, 1f);
+    }
+}

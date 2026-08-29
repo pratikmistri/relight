@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Relight (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Relight (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

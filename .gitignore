@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+
+# Diagnostics written next to the executable
+*.log
+
+# Depth model (~47 MB). Run scripts/fetch-model.ps1 to download it.
+src/Relight/Assets/Models/*.onnx
+
+# IDE / user-specific
+.vs/
+*.user
+*.suo
