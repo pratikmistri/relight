@@ -72,6 +72,8 @@ public sealed class RelightRenderer : IDisposable
     private ID3D11RenderTargetView? _backBufferView;
     private int _swapChainWidth;
     private int _swapChainHeight;
+    private float _compositionScaleX;
+    private float _compositionScaleY;
 
     private bool _resetHistory = true;
     private bool _disposed;
@@ -255,27 +257,47 @@ public sealed class RelightRenderer : IDisposable
         return _device.CreateTexture2D(description);
     }
 
-    /// <summary>Resizes the swap chain to match the panel's physical pixel size.</summary>
-    public void EnsureSize(int width, int height)
+    /// <summary>
+    /// Resizes the swap chain to match the panel's physical pixel size and maps it back onto the
+    /// panel. A composition swap chain is measured in effective pixels, so a buffer sized in
+    /// physical pixels renders oversized and clipped until the composition scale is undone.
+    /// </summary>
+    public void EnsureSize(int width, int height, float scaleX, float scaleY)
     {
         width = Math.Max(width, 1);
         height = Math.Max(height, 1);
-        if (width == _swapChainWidth && height == _swapChainHeight)
+        scaleX = scaleX > 0f ? scaleX : 1f;
+        scaleY = scaleY > 0f ? scaleY : 1f;
+
+        bool sizeChanged = width != _swapChainWidth || height != _swapChainHeight;
+        bool scaleChanged = scaleX != _compositionScaleX || scaleY != _compositionScaleY;
+        if (!sizeChanged && !scaleChanged)
         {
             return;
         }
 
-        _backBufferView?.Dispose();
-        _backBufferView = null;
+        if (sizeChanged)
+        {
+            _backBufferView?.Dispose();
+            _backBufferView = null;
 
-        _swapChain.ResizeBuffers((uint)BufferCount, (uint)width, (uint)height, BackBufferFormat, SwapChainFlags.None)
-            .CheckError();
+            _swapChain.ResizeBuffers((uint)BufferCount, (uint)width, (uint)height, BackBufferFormat, SwapChainFlags.None)
+                .CheckError();
 
-        using var backBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
-        _backBufferView = _device.CreateRenderTargetView(backBuffer);
-        _swapChainWidth = width;
-        _swapChainHeight = height;
-        DiagnosticLog.Write($"swapchain resized: {width}x{height}");
+            using var backBuffer = _swapChain.GetBuffer<ID3D11Texture2D>(0);
+            _backBufferView = _device.CreateRenderTargetView(backBuffer);
+            _swapChainWidth = width;
+            _swapChainHeight = height;
+        }
+
+        using (var swapChain2 = _swapChain.QueryInterface<IDXGISwapChain2>())
+        {
+            swapChain2.MatrixTransform = new Matrix3x2(1f / scaleX, 0f, 0f, 1f / scaleY, 0f, 0f);
+        }
+
+        _compositionScaleX = scaleX;
+        _compositionScaleY = scaleY;
+        DiagnosticLog.Write($"swapchain resized: {width}x{height} scale={scaleX:F2}x{scaleY:F2}");
     }
 
     /// <summary>Uploads the newest BGRA camera frame.</summary>
@@ -365,9 +387,13 @@ public sealed class RelightRenderer : IDisposable
 
     private static RelightConstants BuildRelightConstants(RelightSettings settings, FittedRect view)
     {
+        // The meter scales the whole relight response, not just the ambient term, so a preset
+        // keeps its key-to-fill ratio while adapting to how bright the room already is.
+        float gain = settings.ExposureGain > 0f ? settings.ExposureGain : 1f;
+
         var constants = new RelightConstants
         {
-            Exposure = settings.Exposure,
+            Exposure = settings.Exposure * gain,
             Relief = settings.Relief,
             Specular = settings.Specular,
             Shadow = settings.Shadow,
@@ -377,12 +403,14 @@ public sealed class RelightRenderer : IDisposable
             Mode = (uint)settings.Mode,
             LightCount = (uint)Math.Clamp(settings.LightCount, 0, RelightSettings.MaxLights),
             WorldScale = new Vector2((float)(view.Height > 0 ? view.Width / view.Height : 1.0), 1f),
+            BulbMode = (uint)settings.Bulb,
+            Strength = Math.Clamp(settings.Strength, 0f, 1f),
         };
 
         for (int index = 0; index < RelightSettings.MaxLights; index++)
         {
             var light = settings.Lights[index];
-            constants.LightColors[index] = new Vector4(light.ColorR, light.ColorG, light.ColorB, light.Intensity);
+            constants.LightColors[index] = new Vector4(light.ColorR, light.ColorG, light.ColorB, light.Intensity * gain);
             constants.LightPositions[index] = new Vector4(light.X, light.Y, light.Z, light.CastsShadow ? 1f : 0f);
         }
 
@@ -539,6 +567,10 @@ public sealed class RelightRenderer : IDisposable
         public uint Mode;
         public uint LightCount;
         public Vector2 WorldScale;
+        public uint BulbMode;
+        public float Strength;
         private readonly float _padding0;
+        private readonly float _padding1;
+        private readonly float _padding2;
     }
 }

@@ -15,6 +15,13 @@ public sealed class LightController
     private const float WheelStepLimit = 60f;
     private const float GrabRadius = 0.08f;
 
+    /// <summary>
+    /// How far past the frame edge a light may be pushed, in image widths. The pointer keeps
+    /// steering the light in the letterboxed area, so the source can sit out of shot while
+    /// still lighting the subject.
+    /// </summary>
+    private const float OffscreenMargin = 0.5f;
+
     private enum ControlMode
     {
         Orbit,
@@ -30,10 +37,16 @@ public sealed class LightController
         _settings = settings;
     }
 
+    /// <summary>
+    /// Set while the user is arranging lights by hand, so pointer steering and the idle orbit
+    /// do not fight the custom rig.
+    /// </summary>
+    public bool Suspended { get; set; }
+
     /// <summary>Advances the idle orbit; call once per rendered frame.</summary>
     public void Tick(double elapsedMilliseconds)
     {
-        if (_mode != ControlMode.Orbit)
+        if (Suspended || _mode != ControlMode.Orbit)
         {
             return;
         }
@@ -96,7 +109,7 @@ public sealed class LightController
 
     private void Place(float x, float y)
     {
-        _settings.KeyLight.X = Math.Clamp(x, 0f, 1f);
-        _settings.KeyLight.Y = Math.Clamp(y, 0f, 1f);
+        _settings.KeyLight.X = Math.Clamp(x, -OffscreenMargin, 1f + OffscreenMargin);
+        _settings.KeyLight.Y = Math.Clamp(y, -OffscreenMargin, 1f + OffscreenMargin);
     }
 }

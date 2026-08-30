@@ -27,7 +27,7 @@
 #define NEAR_Z             0.0
 #define SURFACE_FAR_Z      (-0.7)
 #define LIGHT_RADIUS       0.85
-#define LIGHT_WRAP         0.25
+#define LIGHT_WRAP         0.34
 #define RELIEF_SCALE       200.0
 #define SLOPE_COMPRESSION  0.55
 #define SPECULAR_POWER     36.0
@@ -63,17 +63,30 @@
 #define SHADOW_SLOPE_BIAS       0.02
 #define SHADOW_THICKNESS        0.7
 #define SHADOW_THICKNESS_GROWTH 2.6
-#define SHADOW_SOFTNESS         0.089
+#define SHADOW_SOFTNESS         0.16
 #define SHADOW_GAIN             2.5
 #define SHADOW_FRONT_FADE       0.2
+
+/// How much the shadow ramp widens with distance travelled along the ray. A real source has an
+/// area, so its penumbra widens the further the occluder sits from the receiver; without this a
+/// head throws a razor-edged wedge across a background metres behind it.
+#define SHADOW_PENUMBRA_GROWTH  4.0
+
+/// Depth edges are the least trustworthy part of a monocular height field, and a full-strength
+/// Fresnel rim there paints a hard line around the silhouette. Damp it where the slope saturates.
+#define RIM_EDGE_DAMP           0.3
 
 #define MODE_RELIT   0
 #define MODE_CAMERA  1
 #define MODE_DEPTH   2
 #define MODE_NORMALS 3
 
+#define BULB_FULL   0
+#define BULB_GLOW   1
+#define BULB_HIDDEN 2
+
 /// Maximum simultaneous light sources.
-#define MAX_LIGHTS 4
+#define MAX_LIGHTS 6
 
 static const float3 LUMINANCE_WEIGHTS = float3(0.2126, 0.7152, 0.0722);
 static const float3 AMBIENT_FILL = float3(0.78, 0.86, 1.0);
@@ -110,7 +123,11 @@ cbuffer RelightParams : register(b1)
     uint   LightCount;
     /// Converts UV space into an isotropic world space: (width / height, 1).
     float2 WorldScale;
-    float  RelightPadding;
+    /// One of the BULB_* constants; decides how much of the light source is drawn.
+    uint   BulbMode;
+    /// Blends the relit result back toward the untouched camera image; 1 is the full effect.
+    float  Strength;
+    float3 RelightPadding;
 };
 
 SamplerState LinearClamp : register(s0);
@@ -308,7 +325,8 @@ float ShadowFactor(float3 origin, float3 lightDirection, float reach, float jitt
         if (difference > bias && difference < thickness)
         {
             float behindLight = 1.0 - saturate((sampleZ - lightZ) / SHADOW_FRONT_FADE);
-            occlusion += saturate((difference - bias) / SHADOW_SOFTNESS) * behindLight;
+            float softness = SHADOW_SOFTNESS * (1.0 + (travel / SHADOW_SPAN) * SHADOW_PENUMBRA_GROWTH);
+            occlusion += saturate((difference - bias) / softness) * behindLight;
         }
     }
 
@@ -427,6 +445,11 @@ float4 RelightPS(VertexOutput input) : SV_TARGET
     float3 albedo = pow(cameraColor, GAMMA);
     float3 lit = albedo * AMBIENT_FILL * (Exposure * occlusion);
 
+    // SurfaceSlope caps the gradient at GRADIENT_LIMIT, so this reads 1 exactly where the height
+    // field breaks over a silhouette.
+    float edge = saturate(length(surface.xy) / GRADIENT_LIMIT);
+    float rimDamp = lerp(1.0, RIM_EDGE_DAMP, edge);
+
     for (uint index = 0; index < LightCount; index++)
     {
         float intensity = LightColors[index].a;
@@ -462,7 +485,7 @@ float4 RelightPS(VertexOutput input) : SV_TARGET
 
         float3 halfDirection = normalize(lightDirection + float3(0.0, 0.0, 1.0));
         float lobe = pow(saturate(dot(normal, halfDirection)), SPECULAR_POWER);
-        float grazing = pow(1.0 - saturate(normal.z), 5.0);
+        float grazing = pow(1.0 - saturate(normal.z), 5.0) * rimDamp;
         float highlight = lobe * (SPECULAR_F0 + (1.0 - SPECULAR_F0) * grazing);
 
         lit += albedo * tint * (lambert * falloff * shadow * intensity);
@@ -470,23 +493,33 @@ float4 RelightPS(VertexOutput input) : SV_TARGET
     }
 
     // Bulbs and their glow composite over the accumulated lighting.
-    for (uint bulbIndex = 0; bulbIndex < LightCount; bulbIndex++)
+    if (BulbMode != BULB_HIDDEN)
     {
-        float intensity = LightColors[bulbIndex].a;
-        if (intensity <= 0.0)
+        for (uint bulbIndex = 0; bulbIndex < LightCount; bulbIndex++)
         {
-            continue;
-        }
+            float intensity = LightColors[bulbIndex].a;
+            if (intensity <= 0.0)
+            {
+                continue;
+            }
 
-        float3 tint = LightColors[bulbIndex].rgb;
-        float2 lightUv = LightPositions[bulbIndex].xy;
-        float lightZ = LightPositions[bulbIndex].z;
-        float presence = saturate(intensity / BULB_ONSET);
-        float4 bulb = BulbSurface(uv, tint, surface.w, lightUv, lightZ);
-        lit = lerp(lit, bulb.xyz * presence, bulb.w * presence);
-        lit += BulbGlow(uv, tint, lightUv, lightZ) * presence;
+            float3 tint = LightColors[bulbIndex].rgb;
+            float2 lightUv = LightPositions[bulbIndex].xy;
+            float lightZ = LightPositions[bulbIndex].z;
+            float presence = saturate(intensity / BULB_ONSET);
+            if (BulbMode == BULB_FULL)
+            {
+                float4 bulb = BulbSurface(uv, tint, surface.w, lightUv, lightZ);
+                lit = lerp(lit, bulb.xyz * presence, bulb.w * presence);
+            }
+
+            lit += BulbGlow(uv, tint, lightUv, lightZ) * presence;
+        }
     }
 
     float3 display = pow(Tonemap(lit), 1.0 / GAMMA);
+
+    // Dial the whole look back toward the plain camera image.
+    display = lerp(cameraColor, display, saturate(Strength));
     return float4(display + (noise - 0.5) * DITHER_STEP, 1.0);
 }

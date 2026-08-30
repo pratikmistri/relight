@@ -1,17 +1,22 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Relight.Graphics;
 using Relight.Models;
 using Relight.Services;
 using Relight.ViewModels;
 using Windows.Foundation;
 using Windows.System;
+using Windows.UI;
+using Ellipse = Microsoft.UI.Xaml.Shapes.Ellipse;
 
 namespace Relight;
 
@@ -23,9 +28,19 @@ public sealed partial class MainWindow : Window
 {
     private const string ModelFileName = "depth-anything-v2-small-fp16.onnx";
 
+    /// <summary>Diameter of a light handle in effective pixels.</summary>
+    private const double HandleSize = 22;
+
+    /// <summary>Matches LightController's clamp, so dragging and steering agree.</summary>
+    private const float OffscreenLimit = 0.5f;
+
+    private readonly List<Ellipse> _handles = [];
+    private int _draggingHandle = -1;
+
     private readonly LatestFrameSlot _frames = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly LightController _light;
+    private readonly SceneExposure _exposure = new();
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _overlayTimer;
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _toastTimer;
 
@@ -42,6 +57,8 @@ public sealed partial class MainWindow : Window
     private int _panelHeight;
     private int _pendingWidth;
     private int _pendingHeight;
+    private float _pendingScaleX = 1f;
+    private float _pendingScaleY = 1f;
     private int _framesRendered;
     private int _traceFrames;
     private double _frameAspect = 4.0 / 3.0;
@@ -63,8 +80,11 @@ public sealed partial class MainWindow : Window
         AppWindow.SetPresenter(Microsoft.UI.Windowing.AppWindowPresenterKind.Default);
 
         ViewModel.DepthResolutionChanged += OnDepthResolutionChanged;
+        ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        ViewModel.Lights.CollectionChanged += (_, _) => RebuildLightHandles();
 
         RenderPanel.SizeChanged += OnPanelSizeChanged;
+        RenderPanel.CompositionScaleChanged += OnCompositionScaleChanged;
         RenderPanel.PointerMoved += OnPointerMoved;
         RenderPanel.PointerPressed += OnPointerPressed;
         RenderPanel.PointerEntered += OnPointerEntered;
@@ -135,6 +155,11 @@ public sealed partial class MainWindow : Window
 
             DiagnosticLog.Write($"startup complete; panel {_panelWidth}x{_panelHeight}");
 
+            // The view model builds its light list before this window subscribes, so seed the
+            // handles once here rather than relying only on later collection changes.
+            _light.Suspended = ViewModel.IsCustomMode;
+            RebuildLightHandles();
+
             _loop = new RenderLoop(RenderFrame, OnRenderFailed);
             _loop.Start();
         }
@@ -191,7 +216,11 @@ public sealed partial class MainWindow : Window
         int width = Volatile.Read(ref _pendingWidth);        int height = Volatile.Read(ref _pendingHeight);
         if (width > 0 && height > 0)
         {
-            renderer.EnsureSize(width, height);
+            renderer.EnsureSize(
+                width,
+                height,
+                Volatile.Read(ref _pendingScaleX),
+                Volatile.Read(ref _pendingScaleY));
         }
 
         _light.Tick(_clock.Elapsed.TotalMilliseconds);
@@ -205,6 +234,11 @@ public sealed partial class MainWindow : Window
             double now = _clock.Elapsed.TotalSeconds;
             float delta = _lastDepthUpload > 0 ? (float)(now - _lastDepthUpload) : 0.016f;
             _lastDepthUpload = now;
+
+            // The snapshot always carries the frame the depth was inferred from, so meter there
+            // regardless of whether the render path is showing that same frame.
+            _exposure.Update(_snapshot.Frame, _snapshot.FrameWidth, _snapshot.FrameHeight, delta);
+            ViewModel.Settings.ExposureGain = _exposure.Gain;
 
             if (synced)
             {
@@ -260,7 +294,6 @@ public sealed partial class MainWindow : Window
 
         double fps = _framesRendered * 1000.0 / (now - _lastDiagnosticsUpdate);
         double inference = _depth?.LastInferenceMilliseconds ?? 0;
-        double depthRate = inference > 0 ? 1000.0 / inference : 0;
         _framesRendered = 0;
         _lastDiagnosticsUpdate = now;
 
@@ -271,10 +304,17 @@ public sealed partial class MainWindow : Window
         }
 
         DispatcherQueue.TryEnqueue(() =>
-            DiagnosticsText.Text = $"{fps:F0} fps · depth {inference:F0} ms ({depthRate:F0}/s)");
+            DiagnosticsText.Text = $"{fps:F0} fps · {inference:F0} ms");
     }
 
-    private void OnPanelSizeChanged(object sender, SizeChangedEventArgs e) => UpdatePanelSize();
+    private void OnPanelSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdatePanelSize();
+        PositionLightHandles();
+    }
+
+    /// <summary>Fires when the window moves to a display with a different scale factor.</summary>
+    private void OnCompositionScaleChanged(SwapChainPanel sender, object args) => UpdatePanelSize();
 
     private void OnViewModeSelectionChanged(object sender, SelectionChangedEventArgs e) =>
         ViewModel.ViewModeIndex = ViewModeBox.SelectedIndex;
@@ -293,30 +333,190 @@ public sealed partial class MainWindow : Window
     private void OnDepthResolutionSelectionChanged(object sender, SelectionChangedEventArgs e) =>
         ViewModel.DepthResolutionIndex = DepthResolutionBox.SelectedIndex;
 
+    private void OnBulbVisibilitySelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        ViewModel.BulbVisibilityIndex = BulbVisibilityBox.SelectedIndex;
+
+    private void OnAddLight(object sender, RoutedEventArgs e)
+    {
+        ViewModel.AddLight();
+        RebuildLightHandles();
+    }
+
+    private void OnRemoveLight(object sender, RoutedEventArgs e)
+    {
+        ViewModel.RemoveSelectedLight();
+        RebuildLightHandles();
+    }
+
+    /// <summary>Recreates one handle per active light; positions are set by the layout pass.</summary>
+    private void RebuildLightHandles()
+    {
+        foreach (var handle in _handles)
+        {
+            handle.PointerPressed -= OnHandlePressed;
+            handle.PointerMoved -= OnHandleMoved;
+            handle.PointerReleased -= OnHandleReleased;
+            handle.PointerCaptureLost -= OnHandleReleased;
+        }
+
+        _handles.Clear();
+        LightHandleLayer.Children.Clear();
+
+        for (int index = 0; index < ViewModel.Lights.Count; index++)
+        {
+            var handle = new Ellipse
+            {
+                Width = HandleSize,
+                Height = HandleSize,
+                StrokeThickness = 2,
+                Tag = index,
+            };
+
+            handle.ManipulationMode = ManipulationModes.None;
+            handle.PointerPressed += OnHandlePressed;
+            handle.PointerMoved += OnHandleMoved;
+            handle.PointerReleased += OnHandleReleased;
+            handle.PointerCaptureLost += OnHandleReleased;
+
+            _handles.Add(handle);
+            LightHandleLayer.Children.Add(handle);
+        }
+
+        PositionLightHandles();
+    }
+
+    /// <summary>
+    /// Maps each light's UV position onto the panel through the same letterbox fit the renderer
+    /// uses, so a handle sits exactly where its light is being rendered.
+    /// </summary>
+    private void PositionLightHandles()
+    {
+        if (_handles.Count == 0)
+        {
+            return;
+        }
+
+        var view = FittedRect.Fit(
+            RenderPanel.ActualWidth,
+            RenderPanel.ActualHeight,
+            _renderer?.ImageAspect ?? _frameAspect);
+
+        for (int index = 0; index < _handles.Count && index < ViewModel.Lights.Count; index++)
+        {
+            var light = ViewModel.Lights[index].Light;
+            var handle = _handles[index];
+
+            Canvas.SetLeft(handle, view.X + (light.X * view.Width) - (HandleSize / 2));
+            Canvas.SetTop(handle, view.Y + (light.Y * view.Height) - (HandleSize / 2));
+
+            bool selected = index == ViewModel.SelectedLightIndex;
+            handle.Fill = new SolidColorBrush(Color.FromArgb(
+                selected ? (byte)230 : (byte)150,
+                ToByte(light.ColorR),
+                ToByte(light.ColorG),
+                ToByte(light.ColorB)));
+            handle.Stroke = new SolidColorBrush(selected ? Colors.White : Color.FromArgb(140, 255, 255, 255));
+            handle.StrokeThickness = selected ? 3 : 2;
+        }
+    }
+
+    private static byte ToByte(float channel) => (byte)Math.Clamp(channel * 255f, 0f, 255f);
+
+    private void OnHandlePressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not Ellipse handle || handle.Tag is not int index)
+        {
+            return;
+        }
+
+        ViewModel.SelectedLightIndex = index;
+        _draggingHandle = index;
+        handle.CapturePointer(e.Pointer);
+        PositionLightHandles();
+        e.Handled = true;
+    }
+
+    private void OnHandleMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_draggingHandle < 0 || _draggingHandle >= ViewModel.Lights.Count)
+        {
+            return;
+        }
+
+        var view = FittedRect.Fit(
+            RenderPanel.ActualWidth,
+            RenderPanel.ActualHeight,
+            _renderer?.ImageAspect ?? _frameAspect);
+
+        Point position = e.GetCurrentPoint(RenderPanel).Position;
+        if (!view.TryToImage(position.X, position.Y, out float x, out float y))
+        {
+            return;
+        }
+
+        var light = ViewModel.Lights[_draggingHandle].Light;
+        light.X = Math.Clamp(x, -OffscreenLimit, 1f + OffscreenLimit);
+        light.Y = Math.Clamp(y, -OffscreenLimit, 1f + OffscreenLimit);
+        PositionLightHandles();
+        e.Handled = true;
+    }
+
+    private void OnHandleReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_draggingHandle < 0)
+        {
+            return;
+        }
+
+        _draggingHandle = -1;
+        if (sender is Ellipse handle)
+        {
+            handle.ReleasePointerCapture(e.Pointer);
+        }
+
+        ViewModel.SaveCustomRig();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(MainViewModel.IsCustomMode):
+                _light.Suspended = ViewModel.IsCustomMode;
+                RebuildLightHandles();
+                break;
+            case nameof(MainViewModel.SelectedLightIndex):
+                PositionLightHandles();
+                break;
+        }
+    }
+
     private void UpdatePanelSize()
     {
-        double scale = RenderPanel.CompositionScaleX <= 0 ? 1.0 : RenderPanel.CompositionScaleX;
-        _panelWidth = Math.Max(1, (int)Math.Round(RenderPanel.ActualWidth * scale));
-        _panelHeight = Math.Max(1, (int)Math.Round(RenderPanel.ActualHeight * scale));
+        double scaleX = RenderPanel.CompositionScaleX <= 0 ? 1.0 : RenderPanel.CompositionScaleX;
+        double scaleY = RenderPanel.CompositionScaleY <= 0 ? 1.0 : RenderPanel.CompositionScaleY;
+        _panelWidth = Math.Max(1, (int)Math.Round(RenderPanel.ActualWidth * scaleX));
+        _panelHeight = Math.Max(1, (int)Math.Round(RenderPanel.ActualHeight * scaleY));
 
         // The render thread owns Direct3D, so hand the size over instead of resizing here.
         Volatile.Write(ref _pendingWidth, _panelWidth);
         Volatile.Write(ref _pendingHeight, _panelHeight);
+        Volatile.Write(ref _pendingScaleX, (float)scaleX);
+        Volatile.Write(ref _pendingScaleY, (float)scaleY);
     }
 
     /// <summary>
     /// Converts a pointer position into image coordinates using the same letterbox fit the
     /// renderer uses for its viewport, so the light lands exactly under the cursor.
-    /// Pointer positions arrive in physical pixels, so the panel size is scaled to match.
+    /// Pointer positions and <see cref="FrameworkElement.ActualWidth"/> are both in effective
+    /// pixels, so the fit is computed there and the composition scale cancels out.
     /// </summary>
     private bool TryGetImagePoint(PointerRoutedEventArgs e, out float x, out float y)
     {
         Point position = e.GetCurrentPoint(RenderPanel).Position;
-        double scaleX = RenderPanel.CompositionScaleX <= 0 ? 1.0 : RenderPanel.CompositionScaleX;
-        double scaleY = RenderPanel.CompositionScaleY <= 0 ? 1.0 : RenderPanel.CompositionScaleY;
         var view = FittedRect.Fit(
-            RenderPanel.ActualWidth * scaleX,
-            RenderPanel.ActualHeight * scaleY,
+            RenderPanel.ActualWidth,
+            RenderPanel.ActualHeight,
             _renderer?.ImageAspect ?? _frameAspect);
         return view.TryToImage(position.X, position.Y, out x, out y);
     }
@@ -330,8 +530,7 @@ public sealed partial class MainWindow : Window
 
         // Reveal the overlay only when the pointer approaches the bottom edge.
         double y2 = e.GetCurrentPoint(RenderPanel).Position.Y;
-        double scaleY = RenderPanel.CompositionScaleY <= 0 ? 1.0 : RenderPanel.CompositionScaleY;
-        double height = RenderPanel.ActualHeight * scaleY;
+        double height = RenderPanel.ActualHeight;
         if (height > 0 && y2 > height * 0.78)
         {
             SetOverlayVisible(true);
@@ -357,6 +556,17 @@ public sealed partial class MainWindow : Window
                 break;
             case VirtualKey.H:
                 SetOverlayVisible(!ViewModel.ShowOverlay);
+                return;
+            case VirtualKey.B:
+                ViewModel.NextBulbVisibility();
+                BulbVisibilityBox.SelectedIndex = ViewModel.BulbVisibilityIndex;
+                SetOverlayVisible(true);
+                e.Handled = true;
+                return;
+            case VirtualKey.C:
+                ViewModel.IsCustomMode = !ViewModel.IsCustomMode;
+                SetOverlayVisible(true);
+                e.Handled = true;
                 return;
             default:
                 if (e.Key >= VirtualKey.Number1 && e.Key <= VirtualKey.Number9)

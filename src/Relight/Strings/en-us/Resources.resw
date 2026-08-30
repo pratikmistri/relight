@@ -59,11 +59,94 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
 
-  <data name="ViewModeBox.Header" xml:space="preserve">
-    <value>View</value>
-  </data>
   <data name="PresetBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Lighting preset</value>
+  </data>
+
+  <data name="PresetLabel.Text" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="ViewModeLabel.Text" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="BulbVisibilityLabel.Text" xml:space="preserve">
+    <value>Light source</value>
+  </data>
+  <data name="DepthResolutionLabel.Text" xml:space="preserve">
+    <value>Depth quality</value>
+  </data>
+  <data name="StrengthLabel.Text" xml:space="preserve">
+    <value>Strength</value>
+  </data>
+
+  <data name="CustomModeToggle.Content" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="CustomModeToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Custom light rig</value>
+  </data>
+  <data name="CustomModeToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Arrange lights by hand (C)</value>
+  </data>
+  <data name="CustomLightsSection.Text" xml:space="preserve">
+    <value>Lights</value>
+  </data>
+  <data name="SelectedLightSection.Text" xml:space="preserve">
+    <value>Selected light</value>
+  </data>
+  <data name="GlobalsSection.Text" xml:space="preserve">
+    <value>Global response</value>
+  </data>
+  <data name="AddLightButton.Content" xml:space="preserve">
+    <value>Add light</value>
+  </data>
+  <data name="AddLightButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Add a light to the rig</value>
+  </data>
+  <data name="RemoveLightButton.Content" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="RemoveLightButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Remove the selected light</value>
+  </data>
+  <data name="LightDepthField.Text" xml:space="preserve">
+    <value>Depth</value>
+  </data>
+  <data name="LightIntensityField.Text" xml:space="preserve">
+    <value>Intensity</value>
+  </data>
+  <data name="LightRedField.Text" xml:space="preserve">
+    <value>Red</value>
+  </data>
+  <data name="LightGreenField.Text" xml:space="preserve">
+    <value>Green</value>
+  </data>
+  <data name="LightBlueField.Text" xml:space="preserve">
+    <value>Blue</value>
+  </data>
+  <data name="CastsShadowToggle.Header" xml:space="preserve">
+    <value>Casts shadow</value>
+  </data>
+  <data name="CastsShadowToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>This light casts shadows</value>
+  </data>
+  <data name="AmbientField.Text" xml:space="preserve">
+    <value>Ambient</value>
+  </data>
+  <data name="ReliefField.Text" xml:space="preserve">
+    <value>Relief</value>
+  </data>
+  <data name="SpecularField.Text" xml:space="preserve">
+    <value>Specular</value>
+  </data>
+  <data name="ShadowField.Text" xml:space="preserve">
+    <value>Shadow</value>
+  </data>
+  <data name="OcclusionField.Text" xml:space="preserve">
+    <value>Occlusion</value>
+  </data>
+  <data name="StrengthField.Text" xml:space="preserve">
+    <value>Strength</value>
   </data>
   <data name="PreviousPresetButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Previous lighting preset</value>
@@ -93,9 +176,29 @@
     <value>Normals</value>
   </data>
 
-  <data name="DepthResolutionBox.Header" xml:space="preserve">
-    <value>Depth quality</value>
+  <data name="BulbVisibilityBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Light source visibility</value>
   </data>
+  <data name="BulbVisibilityBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Show or hide the light source itself (B)</value>
+  </data>
+  <data name="BulbVisibilityFull.Content" xml:space="preserve">
+    <value>Bulb and glow</value>
+  </data>
+  <data name="BulbVisibilityGlow.Content" xml:space="preserve">
+    <value>Glow only</value>
+  </data>
+  <data name="BulbVisibilityHidden.Content" xml:space="preserve">
+    <value>Hidden</value>
+  </data>
+
+  <data name="StrengthSlider.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Look strength</value>
+  </data>
+  <data name="StrengthSlider.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>How far the relit look is blended over the plain camera image</value>
+  </data>
+
   <data name="DepthResolutionBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Depth model resolution</value>
   </data>

@@ -7,14 +7,27 @@
     xmlns:local="using:Relight"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:models="using:Relight.Models"
+    xmlns:vm="using:Relight.ViewModels"
     Title="Relight"
     mc:Ignorable="d">
 
     <Grid Background="Black">
-        <SwapChainPanel
-            x:Name="RenderPanel"
-            AutomationProperties.AutomationId="RenderPanel"
-            AutomationProperties.Name="Relit camera view" />
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Grid x:Name="ViewportHost" Grid.Column="0">
+            <SwapChainPanel
+                x:Name="RenderPanel"
+                AutomationProperties.AutomationId="RenderPanel"
+                AutomationProperties.Name="Relit camera view" />
+
+            <!--  Draggable light positions; only live while arranging a custom rig.  -->
+            <Canvas
+                x:Name="LightHandleLayer"
+                IsHitTestVisible="{x:Bind ViewModel.IsCustomMode, Mode=OneWay}"
+                Visibility="{x:Bind ViewModel.CustomPaneVisibility, Mode=OneWay}" />
 
         <!--  Status while starting up or on failure.  -->
         <Border
@@ -59,77 +72,392 @@
         <Border
             x:Name="Overlay"
             Margin="24"
-            Padding="14,10"
+            Padding="16,10,16,12"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             Background="#C0000000"
             CornerRadius="14">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button
-                    x:Uid="PreviousPresetButton"
-                    AutomationProperties.AutomationId="PreviousPresetButton"
-                    Click="OnPreviousPreset"
-                    Content="&#xE76B;"
-                    FontFamily="Segoe MDL2 Assets" />
+            <!--
+                Two rows keep every label on one baseline and every control on another. Using each
+                control's built-in Header instead makes headerless controls sit at a different
+                height, which is what threw the row out of alignment.
+            -->
+            <Grid ColumnSpacing="12" RowSpacing="6">
+                <Grid.Resources>
+                    <Style x:Key="OverlayLabelStyle" TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#B3FFFFFF" />
+                        <Setter Property="FontSize" Value="12" />
+                        <Setter Property="VerticalAlignment" Value="Bottom" />
+                    </Style>
+                    <Style x:Key="OverlayComboStyle" TargetType="ComboBox">
+                        <Setter Property="Height" Value="32" />
+                        <Setter Property="MinWidth" Value="0" />
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                    </Style>
+                    <Style x:Key="OverlayRuleStyle" TargetType="Border">
+                        <Setter Property="Width" Value="1" />
+                        <Setter Property="Background" Value="#33FFFFFF" />
+                        <Setter Property="VerticalAlignment" Value="Stretch" />
+                        <Setter Property="Margin" Value="2,2,2,0" />
+                    </Style>
+                </Grid.Resources>
 
-                <ComboBox
-                    x:Name="PresetBox"
-                    x:Uid="PresetBox"
-                    Width="190"
-                    AutomationProperties.AutomationId="PresetBox"
-                    ItemsSource="{x:Bind ViewModel.Presets}"
-                    SelectedIndex="0"
-                    SelectionChanged="OnPresetSelectionChanged">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="models:LightingPreset">
-                            <TextBlock Text="{x:Bind Name}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="32" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-                <Button
-                    x:Uid="NextPresetButton"
-                    AutomationProperties.AutomationId="NextPresetButton"
-                    Click="OnNextPreset"
-                    Content="&#xE76C;"
-                    FontFamily="Segoe MDL2 Assets" />
+                <TextBlock
+                    x:Name="PresetLabel"
+                    x:Uid="PresetLabel"
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    Style="{StaticResource OverlayLabelStyle}" />
+                <StackPanel
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Orientation="Horizontal"
+                    Spacing="6">
+                    <Button
+                        x:Uid="PreviousPresetButton"
+                        Width="34"
+                        Height="32"
+                        Padding="0"
+                        AutomationProperties.AutomationId="PreviousPresetButton"
+                        Click="OnPreviousPreset"
+                        Content="&#xE76B;"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="12" />
+                    <ComboBox
+                        x:Name="PresetBox"
+                        x:Uid="PresetBox"
+                        Width="168"
+                        AutomationProperties.AutomationId="PresetBox"
+                        AutomationProperties.LabeledBy="{x:Bind PresetLabel}"
+                        ItemsSource="{x:Bind ViewModel.Presets}"
+                        SelectedIndex="0"
+                        SelectionChanged="OnPresetSelectionChanged"
+                        Style="{StaticResource OverlayComboStyle}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:LightingPreset">
+                                <TextBlock Text="{x:Bind Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button
+                        x:Uid="NextPresetButton"
+                        Width="34"
+                        Height="32"
+                        Padding="0"
+                        AutomationProperties.AutomationId="NextPresetButton"
+                        Click="OnNextPreset"
+                        Content="&#xE76C;"
+                        FontFamily="Segoe MDL2 Assets"
+                        FontSize="12" />
+                </StackPanel>
 
-                <AppBarSeparator />
+                <Border
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Grid.Column="1"
+                    Style="{StaticResource OverlayRuleStyle}" />
 
+                <TextBlock
+                    x:Name="ViewModeLabel"
+                    x:Uid="ViewModeLabel"
+                    Grid.Row="0"
+                    Grid.Column="2"
+                    Style="{StaticResource OverlayLabelStyle}" />
                 <ComboBox
                     x:Name="ViewModeBox"
                     x:Uid="ViewModeBox"
-                    Width="130"
+                    Grid.Row="1"
+                    Grid.Column="2"
+                    Width="104"
                     AutomationProperties.AutomationId="ViewModeBox"
+                    AutomationProperties.LabeledBy="{x:Bind ViewModeLabel}"
                     SelectedIndex="0"
-                    SelectionChanged="OnViewModeSelectionChanged">
+                    SelectionChanged="OnViewModeSelectionChanged"
+                    Style="{StaticResource OverlayComboStyle}">
                     <ComboBoxItem x:Uid="ViewModeRelit" />
                     <ComboBoxItem x:Uid="ViewModeCamera" />
                     <ComboBoxItem x:Uid="ViewModeDepth" />
                     <ComboBoxItem x:Uid="ViewModeNormals" />
                 </ComboBox>
 
+                <TextBlock
+                    x:Name="BulbVisibilityLabel"
+                    x:Uid="BulbVisibilityLabel"
+                    Grid.Row="0"
+                    Grid.Column="3"
+                    Style="{StaticResource OverlayLabelStyle}" />
+                <ComboBox
+                    x:Name="BulbVisibilityBox"
+                    x:Uid="BulbVisibilityBox"
+                    Grid.Row="1"
+                    Grid.Column="3"
+                    Width="128"
+                    AutomationProperties.AutomationId="BulbVisibilityBox"
+                    AutomationProperties.LabeledBy="{x:Bind BulbVisibilityLabel}"
+                    SelectedIndex="2"
+                    SelectionChanged="OnBulbVisibilitySelectionChanged"
+                    Style="{StaticResource OverlayComboStyle}">
+                    <ComboBoxItem x:Uid="BulbVisibilityFull" />
+                    <ComboBoxItem x:Uid="BulbVisibilityGlow" />
+                    <ComboBoxItem x:Uid="BulbVisibilityHidden" />
+                </ComboBox>
+
+                <TextBlock
+                    x:Name="DepthResolutionLabel"
+                    x:Uid="DepthResolutionLabel"
+                    Grid.Row="0"
+                    Grid.Column="4"
+                    Style="{StaticResource OverlayLabelStyle}"
+                    Visibility="{x:Bind ViewModel.SecondaryControlsVisibility, Mode=OneWay}" />
                 <ComboBox
                     x:Name="DepthResolutionBox"
                     x:Uid="DepthResolutionBox"
-                    Width="150"
+                    Grid.Row="1"
+                    Grid.Column="4"
+                    Width="136"
                     AutomationProperties.AutomationId="DepthResolutionBox"
+                    AutomationProperties.LabeledBy="{x:Bind DepthResolutionLabel}"
                     SelectedIndex="1"
-                    SelectionChanged="OnDepthResolutionSelectionChanged">
+                    SelectionChanged="OnDepthResolutionSelectionChanged"
+                    Style="{StaticResource OverlayComboStyle}"
+                    Visibility="{x:Bind ViewModel.SecondaryControlsVisibility, Mode=OneWay}">
                     <ComboBoxItem x:Uid="DepthResolutionFastest" />
                     <ComboBoxItem x:Uid="DepthResolutionFast" />
                     <ComboBoxItem x:Uid="DepthResolutionBalanced" />
                     <ComboBoxItem x:Uid="DepthResolutionDetailed" />
                 </ComboBox>
 
-                <AppBarSeparator />
+                <Border
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Grid.Column="5"
+                    Style="{StaticResource OverlayRuleStyle}" />
+
+                <TextBlock
+                    x:Name="StrengthLabel"
+                    x:Uid="StrengthLabel"
+                    Grid.Row="0"
+                    Grid.Column="6"
+                    Style="{StaticResource OverlayLabelStyle}" />
+                <Slider
+                    x:Name="StrengthSlider"
+                    x:Uid="StrengthSlider"
+                    Grid.Row="1"
+                    Grid.Column="6"
+                    Width="120"
+                    Margin="0,-4,0,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="StrengthSlider"
+                    AutomationProperties.LabeledBy="{x:Bind StrengthLabel}"
+                    Maximum="100"
+                    Minimum="0"
+                    StepFrequency="5"
+                    Value="{x:Bind ViewModel.StrengthPercent, Mode=TwoWay}" />
 
                 <TextBlock
                     x:Name="DiagnosticsText"
+                    Grid.Row="1"
+                    Grid.Column="7"
+                    Width="104"
+                    Margin="4,0,0,0"
                     VerticalAlignment="Center"
-                    Foreground="#A0FFFFFF"
-                    Style="{ThemeResource CaptionTextBlockStyle}" />
+                    Foreground="#8CFFFFFF"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    TextAlignment="Right"
+                    TextTrimming="CharacterEllipsis"
+                    Visibility="{x:Bind ViewModel.SecondaryControlsVisibility, Mode=OneWay}" />
+
+                <Border
+                    Grid.Row="0"
+                    Grid.RowSpan="2"
+                    Grid.Column="8"
+                    Style="{StaticResource OverlayRuleStyle}" />
+
+                <ToggleButton
+                    x:Name="CustomModeToggle"
+                    x:Uid="CustomModeToggle"
+                    Grid.Row="1"
+                    Grid.Column="9"
+                    Height="32"
+                    Padding="12,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="CustomModeToggle"
+                    IsChecked="{x:Bind ViewModel.IsCustomMode, Mode=TwoWay}" />
+            </Grid>
+        </Border>
+        </Grid>
+
+        <!--  Custom rig pane. Takes a column of its own so it narrows the viewport instead of covering the subject.  -->
+        <Border
+        x:Name="CustomPane"
+        Grid.Column="1"
+        Width="316"
+        Background="#F2101010"
+        BorderBrush="#26FFFFFF"
+        BorderThickness="1,0,0,0"
+        Visibility="{x:Bind ViewModel.CustomPaneVisibility, Mode=OneWay}">
+        <ScrollViewer Padding="18,16,18,20" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14">
+                <StackPanel.Resources>
+                    <Style x:Key="PaneSectionStyle" TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#FFFFFFFF" />
+                        <Setter Property="FontSize" Value="13" />
+                        <Setter Property="FontWeight" Value="SemiBold" />
+                        <Setter Property="Margin" Value="0,4,0,0" />
+                    </Style>
+                    <Style x:Key="PaneFieldStyle" TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="#B3FFFFFF" />
+                        <Setter Property="FontSize" Value="12" />
+                    </Style>
+                    <Style x:Key="PaneSliderStyle" TargetType="Slider">
+                        <Setter Property="Margin" Value="0,-6,0,-6" />
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    </Style>
+                </StackPanel.Resources>
+
+                <TextBlock x:Uid="CustomLightsSection" Style="{StaticResource PaneSectionStyle}" />
+
+                <ListView
+                    x:Name="LightList"
+                    MaxHeight="180"
+                    AutomationProperties.AutomationId="LightList"
+                    ItemsSource="{x:Bind ViewModel.Lights, Mode=OneWay}"
+                    SelectedIndex="{x:Bind ViewModel.SelectedLightIndex, Mode=TwoWay}"
+                    SelectionMode="Single">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LightSlot">
+                            <TextBlock Text="{x:Bind Label}" />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button
+                        x:Uid="AddLightButton"
+                        AutomationProperties.AutomationId="AddLightButton"
+                        Click="OnAddLight"
+                        IsEnabled="{x:Bind ViewModel.CanAddLight, Mode=OneWay}" />
+                    <Button
+                        x:Uid="RemoveLightButton"
+                        AutomationProperties.AutomationId="RemoveLightButton"
+                        Click="OnRemoveLight"
+                        IsEnabled="{x:Bind ViewModel.CanRemoveLight, Mode=OneWay}" />
+                </StackPanel>
+
+                <TextBlock x:Uid="SelectedLightSection" Style="{StaticResource PaneSectionStyle}" />
+
+                <TextBlock x:Uid="LightDepthField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="{x:Bind ViewModel.LightZMax}"
+                    Minimum="{x:Bind ViewModel.LightZMin}"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.SelectedLight.Z, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="LightIntensityField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="4"
+                    Minimum="0"
+                    StepFrequency="0.05"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.SelectedLight.Intensity, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="LightRedField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.SelectedLight.ColorR, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="LightGreenField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.SelectedLight.ColorG, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="LightBlueField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.SelectedLight.ColorB, Mode=TwoWay}" />
+
+                <ToggleSwitch
+                    x:Uid="CastsShadowToggle"
+                    AutomationProperties.AutomationId="CastsShadowToggle"
+                    IsOn="{x:Bind ViewModel.SelectedLight.CastsShadow, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="GlobalsSection" Style="{StaticResource PaneSectionStyle}" />
+
+                <TextBlock x:Uid="AmbientField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.Exposure, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="ReliefField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1.5"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.Relief, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="SpecularField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="0.6"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.Specular, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="ShadowField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.Shadow, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="OcclusionField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="1"
+                    Minimum="0"
+                    StepFrequency="0.01"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.Occlusion, Mode=TwoWay}" />
+
+                <TextBlock x:Uid="StrengthField" Style="{StaticResource PaneFieldStyle}" />
+                <Slider
+                    Maximum="100"
+                    Minimum="0"
+                    StepFrequency="5"
+                    Style="{StaticResource PaneSliderStyle}"
+                    Value="{x:Bind ViewModel.StrengthPercent, Mode=TwoWay}" />
             </StackPanel>
+        </ScrollViewer>
         </Border>
     </Grid>
 </Window>

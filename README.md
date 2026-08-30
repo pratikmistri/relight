@@ -6,7 +6,8 @@ example, driven by a live camera feed.
 
 A monocular depth network estimates a depth map from each camera frame; that depth field is
 turned into a surface (slope + height-field occlusion) and then relit on the GPU with a movable
-virtual light — complete with ray-marched cast shadows, a visible bulb, glow, and tone mapping.
+virtual light — complete with ray-marched cast shadows, an optional bulb and glow, and tone
+mapping.
 
 ## Pipeline
 
@@ -107,13 +108,34 @@ edge (or on <kbd>H</kbd>) and fades after a couple of seconds.
 
 | Input | Action |
 |---|---|
-| Move the pointer | Steers the key light; idles into a slow orbit when the pointer leaves |
+| Move the pointer | Steers the key light, including past the frame edge so the source sits out of shot; idles into a slow orbit when the pointer leaves |
 | Click | Pins the light; click the light again to release it |
 | Scroll | Pushes the key light toward or away from the camera |
 | <kbd>←</kbd> / <kbd>→</kbd> or <kbd>Space</kbd> | Previous / next lighting preset |
 | <kbd>1</kbd>–<kbd>9</kbd> | Jump straight to a preset |
 | <kbd>V</kbd> | Cycle view: relit, camera, depth, normals |
+| <kbd>B</kbd> | Cycle light source: bulb and glow, glow only, hidden |
+| <kbd>C</kbd> | Toggle custom mode |
 | <kbd>H</kbd> | Show or hide the overlay |
+
+## Custom mode
+
+Press <kbd>C</kbd> or the **Custom** toggle in the overlay to arrange a rig by hand. A pane opens
+on the right, narrowing the viewport rather than covering the subject, and a draggable handle
+appears over each light.
+
+| Action | Result |
+|---|---|
+| Drag a handle | Moves that light, including past the frame edge |
+| Click a handle or a row in the list | Selects the light to edit |
+| Add light / Remove | Up to `MAX_LIGHTS` (6) lights; at least one always remains |
+
+The pane edits the selected light's depth, intensity, RGB and shadow casting, plus the global
+response (ambient, relief, specular, shadow, occlusion, strength). The pointer's light steering and
+the idle orbit are suspended while custom mode is on, so nothing fights your placement.
+
+The rig is saved to `%LOCALAPPDATA%\Relight\custom-rig.json` whenever it changes and is restored
+the next time custom mode is entered.
 
 ## Lighting presets
 
@@ -122,21 +144,52 @@ complete light rig. The first light in a rig is the key, and it is the one the p
 
 | Preset | Rig |
 |---|---|
-| Rembrandt | Single warm key high on one side, deep falloff |
-| Butterfly | Key above centre with a soft cool under-fill |
-| Split | Hard side light, half the subject in shadow |
-| Three-Point | Key, cool fill and a bright rim |
-| Neon Nights | Opposing magenta and cyan sources, both casting |
-| Golden Hour | Low warm sun with a soft bounce |
-| Candlelit | Close, warm and dim with strong relief |
+| Studio Soft | Broad neutral key with an even fill (default) |
+| Ring Light | Even frontal light, almost no shadow |
+| Editorial | Soft key, cool fill and a gentle rim |
+| Rembrandt | Warm key high on one side, with the shadow lifted |
+| Butterfly | Key above centre with a soft under-fill |
 | Clamshell | Even beauty lighting from above and below |
-| Moonlight | Cool single source, high and distant |
+| Three-Point | Key, cool fill and a soft rim |
+| Golden Hour | Low warm sun with a soft bounce |
+| Twilight Glow | Neutral key with soft magenta and cyan glow |
+| Candlelit | Close, warm and dim with strong relief |
+| Neon Nights | Opposing magenta and cyan sources |
+
+The first seven are tuned for a webcam: keys stay near-neutral so skin keeps its colour, coloured
+lights are low-intensity and **non-shadowing** so they read as a glow rather than a hard cast.
+*Golden Hour*, *Candlelit* and *Neon Nights* keep their original expressive character — deep amber
+and saturated magenta/cyan keys — which is what makes them look like a lighting setup rather than
+a tint.
+
+Two shader changes let the expressive presets run at full strength without the artefacts they used
+to bring: `SHADOW_SOFTNESS` is 0.16 (up from 0.089) so shadow edges ramp instead of snapping, and
+`RIM_EDGE_DAMP` cuts the Fresnel rim where the height field breaks over a silhouette, which is what
+used to paint a sharp line around the head.
+
+## Strength and auto-exposure
+
+Two controls keep the look from overwhelming the image:
+
+- **Strength** (overlay slider, default 60%) blends the relit result back toward the untouched
+  camera image at the very end of the shader. 0% is the plain camera, 100% is the full effect.
+- **Auto-exposure** meters the mean luminance of each frame the depth model consumed and smooths
+  a clamped gain toward a target. The gain scales the ambient term *and* every light intensity,
+  so a preset keeps its key-to-fill ratio while reading the same in a dim room or a bright one.
 
 ## Multiple lights
 
 The shader supports up to **four simultaneous lights** (`MAX_LIGHTS`), each with its own
 position, depth, colour, intensity and shadow flag. Every light contributes diffuse, specular,
-a visible bulb and glow.
+a bulb and glow.
+
+How much of the light source itself is drawn is a user choice — **Bulb and glow**, **Glow only**
+or **Hidden** — available in the overlay and on <kbd>B</kbd>. It defaults to *Hidden*, and
+lighting, shadows and specular are identical in all three: only the source's own sprite changes.
+Lighting presets never override the choice.
+
+*Glow only* keeps the halo without the solid disc; in a dim room that halo is still a broad
+wash, so *Hidden* is the option to pick when you want the lighting but no visible source.
 
 Ray-marched shadows are by far the most expensive term — 32 texture-sampling steps per light per
 pixel — so each light carries a `CastsShadow` flag and the presets reserve it for lights that
