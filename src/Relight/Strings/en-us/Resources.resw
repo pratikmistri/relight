@@ -82,6 +82,15 @@
   <data name="CustomModeToggle.Content" xml:space="preserve">
     <value>Custom</value>
   </data>
+  <data name="FollowPointerToggle.Content" xml:space="preserve">
+    <value>Follow</value>
+  </data>
+  <data name="FollowPointerToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Key light follows the pointer</value>
+  </data>
+  <data name="FollowPointerToggle.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Let the pointer steer the key light, and drift when idle (L). Off keeps the preset rig as authored.</value>
+  </data>
   <data name="CustomModeToggle.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Custom light rig</value>
   </data>
@@ -180,7 +189,7 @@
     <value>Light source visibility</value>
   </data>
   <data name="BulbVisibilityBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Show or hide the light source itself (B)</value>
+    <value>Show or hide the light source itself (B to cycle, Up and Down to step)</value>
   </data>
   <data name="BulbVisibilityFull.Content" xml:space="preserve">
     <value>Bulb and glow</value>

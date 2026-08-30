@@ -17,6 +17,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _syncFrames = true;
     private bool _showOverlay = true;
     private bool _isCustomMode;
+    private bool _followPointer;
     private int _presetIndex;
     private int _selectedLightIndex;
     private int _depthResolutionIndex = 1;
@@ -171,6 +172,14 @@ public sealed class MainViewModel : ObservableObject
         BulbVisibilityIndex = (BulbVisibilityIndex + 1) % ((int)BulbVisibility.Hidden + 1);
 
     /// <summary>
+    /// Steps the light source one step toward more visible (<paramref name="direction"/> above
+    /// zero) or less visible, stopping at the ends. The enum runs Full, Glow, Hidden, so more
+    /// visible means a lower index.
+    /// </summary>
+    public void StepBulbVisibility(int direction) =>
+        BulbVisibilityIndex = Math.Clamp(BulbVisibilityIndex - Math.Sign(direction), 0, (int)BulbVisibility.Hidden);
+
+    /// <summary>
     /// When set, the pane is shown, presets stop being applied and the pointer stops steering the
     /// key light, so the hand-built rig stays exactly where the user put it.
     /// </summary>
@@ -213,6 +222,16 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     public Microsoft.UI.Xaml.Visibility SecondaryControlsVisibility =>
         _isCustomMode ? Microsoft.UI.Xaml.Visibility.Collapsed : Microsoft.UI.Xaml.Visibility.Visible;
+
+    /// <summary>
+    /// When set, the pointer steers the key light and the idle orbit runs. Off by default so a
+    /// preset's rig stays exactly as authored.
+    /// </summary>
+    public bool FollowPointer
+    {
+        get => _followPointer;
+        set => SetProperty(ref _followPointer, value);
+    }
 
     public int SelectedLightIndex
     {

@@ -108,14 +108,16 @@ edge (or on <kbd>H</kbd>) and fades after a couple of seconds.
 
 | Input | Action |
 |---|---|
-| Move the pointer | Steers the key light, including past the frame edge so the source sits out of shot; idles into a slow orbit when the pointer leaves |
+| Move the pointer | Steers the key light **only while Follow is on** (<kbd>L</kbd>); otherwise the preset rig is left alone |
 | Click | Pins the light; click the light again to release it |
 | Scroll | Pushes the key light toward or away from the camera |
 | <kbd>←</kbd> / <kbd>→</kbd> or <kbd>Space</kbd> | Previous / next lighting preset |
 | <kbd>1</kbd>–<kbd>9</kbd> | Jump straight to a preset |
 | <kbd>V</kbd> | Cycle view: relit, camera, depth, normals |
 | <kbd>B</kbd> | Cycle light source: bulb and glow, glow only, hidden |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Step the light source more / less visible |
 | <kbd>C</kbd> | Toggle custom mode |
+| <kbd>L</kbd> | Toggle pointer steering of the key light |
 | <kbd>H</kbd> | Show or hide the overlay |
 
 ## Custom mode
@@ -144,17 +146,17 @@ complete light rig. The first light in a rig is the key, and it is the one the p
 
 | Preset | Rig |
 |---|---|
-| Studio Soft | Broad neutral key with an even fill (default) |
+| Studio Soft | Broad neutral key, even fill and a background wash (default) |
 | Ring Light | Even frontal light, almost no shadow |
-| Editorial | Soft key, cool fill and a gentle rim |
+| Editorial | Soft key, cool fill and a kicker from behind |
 | Rembrandt | Warm key high on one side, with the shadow lifted |
 | Butterfly | Key above centre with a soft under-fill |
 | Clamshell | Even beauty lighting from above and below |
-| Three-Point | Key, cool fill and a soft rim |
+| Three-Point | Key, cool fill and a back light on the backdrop |
 | Golden Hour | Low warm sun with a soft bounce |
-| Twilight Glow | Neutral key with soft magenta and cyan glow |
-| Candlelit | Close, warm and dim with strong relief |
-| Neon Nights | Opposing magenta and cyan sources |
+| Twilight Glow | Neutral key, magenta on the face, cyan behind |
+| Candlelit | A single low flame, deep shadows and a live flicker |
+| Neon Nights | Magenta and cyan on the face, purple wash behind |
 
 The first seven are tuned for a webcam: keys stay near-neutral so skin keeps its colour, coloured
 lights are low-intensity and **non-shadowing** so they read as a glow rather than a hard cast.
@@ -167,11 +169,31 @@ to bring: `SHADOW_SOFTNESS` is 0.16 (up from 0.089) so shadow edges ramp instead
 `RIM_EDGE_DAMP` cuts the Fresnel rim where the height field breaks over a silhouette, which is what
 used to paint a sharp line around the head.
 
+## Light depth and background lights
+
+A light's `Z` runs from `LightZMin` (−0.66) to `LightZMax` (1.65), while surfaces occupy −0.7
+(the background plane) up to 0.0 (nearest to camera). So a **negative `Z` places a light between
+the subject and the backdrop** — a real studio back light or kicker, lifting the background and
+separating the silhouette rather than adding more front light.
+
+*Studio Soft*, *Editorial*, *Three-Point*, *Twilight Glow* and *Neon Nights* use one. The
+front-lit portrait looks (*Ring Light*, *Butterfly*, *Clamshell*, *Rembrandt*, *Golden Hour*) and
+the single-source *Candlelit* deliberately do not. Background lights never cast: they sit behind
+the occluder, so a shadow ray from them buys artefacts rather than shape.
+
+## Flicker
+
+`RelightSettings.Flicker` gives a preset an unsteady key. *Candlelit* uses it, because a perfectly
+steady flame reads as an orange lamp rather than a candle. The wobble is layered sines at
+incommensurate rates, biased to dip further than it spikes, and it is applied through a separate
+`FlickerGain` so it never leaks into the pane sliders or a saved custom rig. Amplitude 0.16 swings
+between roughly 0.80x and 1.16x with a mean of 0.99x, so the preset's overall exposure is unchanged.
+
 ## Strength and auto-exposure
 
 Two controls keep the look from overwhelming the image:
 
-- **Strength** (overlay slider, default 60%) blends the relit result back toward the untouched
+- **Strength** (overlay slider, default 85%) blends the relit result back toward the untouched
   camera image at the very end of the shader. 0% is the plain camera, 100% is the full effect.
 - **Auto-exposure** meters the mean luminance of each frame the depth model consumed and smooths
   a clamped gain toward a target. The gain scales the ambient term *and* every light intensity,
@@ -179,7 +201,7 @@ Two controls keep the look from overwhelming the image:
 
 ## Multiple lights
 
-The shader supports up to **four simultaneous lights** (`MAX_LIGHTS`), each with its own
+The shader supports up to **six simultaneous lights** (`MAX_LIGHTS`), each with its own
 position, depth, colour, intensity and shadow flag. Every light contributes diffuse, specular,
 a bulb and glow.
 

@@ -43,10 +43,18 @@ public sealed class LightController
     /// </summary>
     public bool Suspended { get; set; }
 
+    /// <summary>
+    /// Pointer steering and the idle orbit are opt-in. A preset is a designed rig, so having the
+    /// key light chase the cursor, or drift on its own while idle, takes it apart.
+    /// </summary>
+    public bool FollowPointer { get; set; }
+
+    private bool IsSteering => FollowPointer && !Suspended;
+
     /// <summary>Advances the idle orbit; call once per rendered frame.</summary>
     public void Tick(double elapsedMilliseconds)
     {
-        if (Suspended || _mode != ControlMode.Orbit)
+        if (!IsSteering || _mode != ControlMode.Orbit)
         {
             return;
         }
@@ -59,7 +67,7 @@ public sealed class LightController
 
     public void PointerEntered()
     {
-        if (_mode != ControlMode.Pinned)
+        if (IsSteering && _mode != ControlMode.Pinned)
         {
             _mode = ControlMode.Cursor;
         }
@@ -67,7 +75,7 @@ public sealed class LightController
 
     public void PointerExited()
     {
-        if (_mode != ControlMode.Pinned)
+        if (IsSteering && _mode != ControlMode.Pinned)
         {
             _mode = ControlMode.Orbit;
         }
@@ -75,7 +83,7 @@ public sealed class LightController
 
     public void PointerMoved(float x, float y)
     {
-        if (_mode == ControlMode.Cursor)
+        if (IsSteering && _mode == ControlMode.Cursor)
         {
             Place(x, y);
         }
@@ -84,6 +92,11 @@ public sealed class LightController
     /// <summary>Clicking the light toggles the pin; clicking elsewhere pins it there.</summary>
     public void PointerPressed(float x, float y)
     {
+        if (!IsSteering)
+        {
+            return;
+        }
+
         bool grabbed = MathF.Sqrt(
             ((x - _settings.KeyLight.X) * (x - _settings.KeyLight.X)) +
             ((y - _settings.KeyLight.Y) * (y - _settings.KeyLight.Y))) <= GrabRadius;
@@ -100,6 +113,11 @@ public sealed class LightController
 
     public void WheelChanged(int delta)
     {
+        if (!IsSteering)
+        {
+            return;
+        }
+
         float clamped = Math.Sign(delta) * MathF.Min(MathF.Abs(delta), WheelStepLimit);
         _settings.KeyLight.Z = Math.Clamp(
             _settings.KeyLight.Z + (clamped * WheelSensitivity),

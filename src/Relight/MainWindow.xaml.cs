@@ -224,6 +224,8 @@ public sealed partial class MainWindow : Window
         }
 
         _light.Tick(_clock.Elapsed.TotalMilliseconds);
+        ViewModel.Settings.FlickerGain =
+            CandleFlicker.Evaluate(_clock.Elapsed.TotalSeconds, ViewModel.Settings.Flicker);
 
         bool synced = ViewModel.SyncFrames;
         var depth = _depth;
@@ -485,6 +487,9 @@ public sealed partial class MainWindow : Window
                 _light.Suspended = ViewModel.IsCustomMode;
                 RebuildLightHandles();
                 break;
+            case nameof(MainViewModel.FollowPointer):
+                _light.FollowPointer = ViewModel.FollowPointer;
+                break;
             case nameof(MainViewModel.SelectedLightIndex):
                 PositionLightHandles();
                 break;
@@ -560,6 +565,23 @@ public sealed partial class MainWindow : Window
             case VirtualKey.B:
                 ViewModel.NextBulbVisibility();
                 BulbVisibilityBox.SelectedIndex = ViewModel.BulbVisibilityIndex;
+                SetOverlayVisible(true);
+                e.Handled = true;
+                return;
+            case VirtualKey.Up:
+                ViewModel.StepBulbVisibility(1);
+                BulbVisibilityBox.SelectedIndex = ViewModel.BulbVisibilityIndex;
+                SetOverlayVisible(true);
+                e.Handled = true;
+                return;
+            case VirtualKey.Down:
+                ViewModel.StepBulbVisibility(-1);
+                BulbVisibilityBox.SelectedIndex = ViewModel.BulbVisibilityIndex;
+                SetOverlayVisible(true);
+                e.Handled = true;
+                return;
+            case VirtualKey.L:
+                ViewModel.FollowPointer = !ViewModel.FollowPointer;
                 SetOverlayVisible(true);
                 e.Handled = true;
                 return;

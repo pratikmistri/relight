@@ -82,7 +82,7 @@
                 control's built-in Header instead makes headerless controls sit at a different
                 height, which is what threw the row out of alignment.
             -->
-            <Grid ColumnSpacing="12" RowSpacing="6">
+            <Grid ColumnSpacing="10" RowSpacing="6">
                 <Grid.Resources>
                     <Style x:Key="OverlayLabelStyle" TargetType="TextBlock">
                         <Setter Property="Foreground" Value="#B3FFFFFF" />
@@ -107,6 +107,8 @@
                     <RowDefinition Height="32" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -142,7 +144,7 @@
                     <ComboBox
                         x:Name="PresetBox"
                         x:Uid="PresetBox"
-                        Width="168"
+                        Width="158"
                         AutomationProperties.AutomationId="PresetBox"
                         AutomationProperties.LabeledBy="{x:Bind PresetLabel}"
                         ItemsSource="{x:Bind ViewModel.Presets}"
@@ -184,7 +186,7 @@
                     x:Uid="ViewModeBox"
                     Grid.Row="1"
                     Grid.Column="2"
-                    Width="104"
+                    Width="100"
                     AutomationProperties.AutomationId="ViewModeBox"
                     AutomationProperties.LabeledBy="{x:Bind ViewModeLabel}"
                     SelectedIndex="0"
@@ -207,7 +209,7 @@
                     x:Uid="BulbVisibilityBox"
                     Grid.Row="1"
                     Grid.Column="3"
-                    Width="128"
+                    Width="122"
                     AutomationProperties.AutomationId="BulbVisibilityBox"
                     AutomationProperties.LabeledBy="{x:Bind BulbVisibilityLabel}"
                     SelectedIndex="2"
@@ -230,7 +232,7 @@
                     x:Uid="DepthResolutionBox"
                     Grid.Row="1"
                     Grid.Column="4"
-                    Width="136"
+                    Width="130"
                     AutomationProperties.AutomationId="DepthResolutionBox"
                     AutomationProperties.LabeledBy="{x:Bind DepthResolutionLabel}"
                     SelectedIndex="1"
@@ -260,7 +262,7 @@
                     x:Uid="StrengthSlider"
                     Grid.Row="1"
                     Grid.Column="6"
-                    Width="120"
+                    Width="112"
                     Margin="0,-4,0,0"
                     VerticalAlignment="Center"
                     AutomationProperties.AutomationId="StrengthSlider"
@@ -274,8 +276,8 @@
                     x:Name="DiagnosticsText"
                     Grid.Row="1"
                     Grid.Column="7"
-                    Width="104"
-                    Margin="4,0,0,0"
+                    Width="86"
+                    Margin="2,0,0,0"
                     VerticalAlignment="Center"
                     Foreground="#8CFFFFFF"
                     Style="{ThemeResource CaptionTextBlockStyle}"
@@ -290,12 +292,23 @@
                     Style="{StaticResource OverlayRuleStyle}" />
 
                 <ToggleButton
-                    x:Name="CustomModeToggle"
-                    x:Uid="CustomModeToggle"
+                    x:Name="FollowPointerToggle"
+                    x:Uid="FollowPointerToggle"
                     Grid.Row="1"
                     Grid.Column="9"
                     Height="32"
-                    Padding="12,0"
+                    Padding="8,0"
+                    VerticalAlignment="Center"
+                    AutomationProperties.AutomationId="FollowPointerToggle"
+                    IsChecked="{x:Bind ViewModel.FollowPointer, Mode=TwoWay}" />
+
+                <ToggleButton
+                    x:Name="CustomModeToggle"
+                    x:Uid="CustomModeToggle"
+                    Grid.Row="1"
+                    Grid.Column="10"
+                    Height="32"
+                    Padding="8,0"
                     VerticalAlignment="Center"
                     AutomationProperties.AutomationId="CustomModeToggle"
                     IsChecked="{x:Bind ViewModel.IsCustomMode, Mode=TwoWay}" />

@@ -410,7 +410,10 @@ public sealed class RelightRenderer : IDisposable
         for (int index = 0; index < RelightSettings.MaxLights; index++)
         {
             var light = settings.Lights[index];
-            constants.LightColors[index] = new Vector4(light.ColorR, light.ColorG, light.ColorB, light.Intensity * gain);
+
+            // Only the key flickers; a wobbling fill would just look like a loose connection.
+            float intensity = light.Intensity * gain * (index == 0 ? settings.FlickerGain : 1f);
+            constants.LightColors[index] = new Vector4(light.ColorR, light.ColorG, light.ColorB, intensity);
             constants.LightPositions[index] = new Vector4(light.X, light.Y, light.Z, light.CastsShadow ? 1f : 0f);
         }
 

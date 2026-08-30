@@ -76,6 +76,15 @@ public sealed class RelightSettings
     /// </summary>
     public float ExposureGain { get; set; } = 1f;
 
+    /// <summary>Flicker amplitude for the key light; zero is a steady source.</summary>
+    public float Flicker { get; set; }
+
+    /// <summary>
+    /// Runtime flicker multiplier for the key light. Kept separate from the light's own intensity
+    /// so the wobble never leaks into the pane sliders or a saved custom rig.
+    /// </summary>
+    public float FlickerGain { get; set; } = 1f;
+
     private static LightSource[] CreateLights()
     {
         var lights = new LightSource[MaxLights];

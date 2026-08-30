@@ -25,13 +25,17 @@ public sealed class LightingPreset
         new LightingPreset
         {
             Name = "Studio Soft",
-            Description = "Broad neutral key with an even fill",
+            Description = "Broad neutral key, even fill and a background wash",
             Apply = settings =>
             {
                 Globals(settings, exposure: 0.30f, relief: 0.85f, specular: 0.20f, shadow: 0.45f, occlusion: 0.45f);
-                settings.LightCount = 2;
+                settings.LightCount = 3;
                 settings.Lights[0].Set(0.36f, 0.28f, 0.70f, 1.00f, 0.98f, 0.95f, 2.6f, true);
                 settings.Lights[1].Set(0.70f, 0.58f, 0.62f, 0.96f, 0.98f, 1.00f, 0.7f, false);
+
+                // Negative depth puts this one between the subject and the backdrop, so it lifts
+                // the background and separates the shoulders instead of adding more front light.
+                settings.Lights[2].Set(0.50f, 0.42f, -0.34f, 1.00f, 0.99f, 0.98f, 1.1f, false);
             },
         },
         new LightingPreset
@@ -48,14 +52,16 @@ public sealed class LightingPreset
         new LightingPreset
         {
             Name = "Editorial",
-            Description = "Soft key, cool fill and a gentle rim",
+            Description = "Soft key, cool fill and a kicker from behind",
             Apply = settings =>
             {
                 Globals(settings, exposure: 0.24f, relief: 0.95f, specular: 0.22f, shadow: 0.60f, occlusion: 0.52f);
                 settings.LightCount = 3;
                 settings.Lights[0].Set(0.34f, 0.28f, 0.65f, 1.00f, 0.97f, 0.93f, 2.7f, true);
                 settings.Lights[1].Set(0.72f, 0.56f, 0.58f, 0.88f, 0.93f, 1.00f, 0.65f, false);
-                settings.Lights[2].Set(0.86f, 0.22f, 0.32f, 1.00f, 0.98f, 0.95f, 1.0f, false);
+
+                // Behind the subject, so it rims the edge and throws light onto the backdrop.
+                settings.Lights[2].Set(0.86f, 0.22f, -0.30f, 1.00f, 0.98f, 0.95f, 1.4f, false);
             },
         },
         new LightingPreset
@@ -97,14 +103,17 @@ public sealed class LightingPreset
         new LightingPreset
         {
             Name = "Three-Point",
-            Description = "Classic key, cool fill and a soft rim",
+            Description = "Key, cool fill and a back light on the backdrop",
             Apply = settings =>
             {
                 Globals(settings, exposure: 0.26f, relief: 0.92f, specular: 0.22f, shadow: 0.55f, occlusion: 0.50f);
                 settings.LightCount = 3;
                 settings.Lights[0].Set(0.32f, 0.28f, 0.62f, 1.00f, 0.97f, 0.92f, 2.7f, true);
                 settings.Lights[1].Set(0.72f, 0.58f, 0.55f, 0.92f, 0.95f, 1.00f, 0.60f, false);
-                settings.Lights[2].Set(0.88f, 0.20f, 0.28f, 1.00f, 0.99f, 0.97f, 0.95f, false);
+
+                // The third point of a three-point rig is genuinely behind the subject; a
+                // positive depth here was really just a second front light.
+                settings.Lights[2].Set(0.88f, 0.20f, -0.32f, 1.00f, 0.99f, 0.97f, 1.4f, false);
             },
         },
         new LightingPreset
@@ -135,28 +144,44 @@ public sealed class LightingPreset
                 // fills, which is what keeps them a glow instead of a hard coloured edge.
                 settings.Lights[0].Set(0.46f, 0.38f, 0.82f, 1.00f, 0.97f, 0.95f, 2.4f, true);
                 settings.Lights[1].Set(0.14f, 0.42f, 0.45f, 1.00f, 0.62f, 0.86f, 0.95f, false);
-                settings.Lights[2].Set(0.86f, 0.50f, 0.45f, 0.62f, 0.88f, 1.00f, 0.95f, false);
+
+                // Cyan sits behind the subject so the colour lands on the backdrop and separates
+                // the silhouette, while the magenta stays forward on the face.
+                settings.Lights[2].Set(0.84f, 0.46f, -0.30f, 0.62f, 0.88f, 1.00f, 1.35f, false);
             },
         },
         new LightingPreset
         {
             Name = "Candlelit",
-            Description = "Close, warm and dim with strong relief",
+            Description = "A single low flame, deep shadows and a live flicker",
             Apply = settings =>
             {
-                Globals(settings, exposure: 0.10f, relief: 1.20f, specular: 0.18f, shadow: 0.90f, occlusion: 0.75f);
+                // Ambient is almost off: a candle lights what it reaches and nothing else, and
+                // that falloff is the whole effect.
+                Globals(
+                    settings,
+                    exposure: 0.03f,
+                    relief: 1.30f,
+                    specular: 0.16f,
+                    shadow: 1.00f,
+                    occlusion: 0.88f,
+                    flicker: 0.16f);
+
                 settings.LightCount = 1;
-                settings.Lights[0].Set(0.38f, 0.72f, 0.80f, 1.00f, 0.62f, 0.24f, 2.6f, true);
+
+                // Low in frame and close in, because a candle sits on the table below the face,
+                // and deeply warm at roughly flame colour temperature.
+                settings.Lights[0].Set(0.40f, 0.78f, 0.88f, 1.00f, 0.52f, 0.16f, 3.0f, true);
             },
         },
         new LightingPreset
         {
             Name = "Neon Nights",
-            Description = "Opposing magenta and cyan glow, no cast shadows",
+            Description = "Magenta and cyan on the face, purple wash behind",
             Apply = settings =>
             {
                 Globals(settings, exposure: 0.16f, relief: 1.05f, specular: 0.30f, shadow: 0.45f, occlusion: 0.55f);
-                settings.LightCount = 2;
+                settings.LightCount = 3;
 
                 // Neither source casts. Two near point lights on opposite sides each throw a
                 // diverging shadow wedge from the head, and the two wedges cross into a hard
@@ -165,6 +190,10 @@ public sealed class LightingPreset
                 // lambert wrap and the height-field occlusion.
                 settings.Lights[0].Set(0.16f, 0.34f, 0.42f, 1.00f, 0.22f, 0.75f, 3.0f, false);
                 settings.Lights[1].Set(0.86f, 0.55f, 0.42f, 0.20f, 0.85f, 1.00f, 2.6f, false);
+
+                // Added behind the subject: the backdrop glow is what makes a neon set read as a
+                // room rather than two coloured lamps pointed at a face.
+                settings.Lights[2].Set(0.50f, 0.40f, -0.34f, 0.62f, 0.40f, 1.00f, 1.5f, false);
             },
         },
     ];
@@ -175,12 +204,14 @@ public sealed class LightingPreset
         float relief,
         float specular,
         float shadow,
-        float occlusion)
+        float occlusion,
+        float flicker = 0f)
     {
         settings.Exposure = exposure;
         settings.Relief = relief;
         settings.Specular = specular;
         settings.Shadow = shadow;
         settings.Occlusion = occlusion;
+        settings.Flicker = flicker;
     }
 }
